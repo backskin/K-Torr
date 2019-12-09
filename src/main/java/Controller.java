@@ -50,7 +50,6 @@ public class Controller {
     private SimpleDateFormat simpleDateFormat = new SimpleDateFormat();
     private long timeStart;
     private BtClient client;
-    private long lastDownloadedBytes = 0;
 
     private Stage owner;
     private Torrent torrent = null;
@@ -95,6 +94,7 @@ public class Controller {
 
         tFilesTable.getItems().clear();
         torrent = null;
+        resetView();
         consoleArea.appendText("Загрузка нового торрента...\n");
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Choose a torrent");
@@ -167,6 +167,9 @@ public class Controller {
         client.startAsync(new Consumer<TorrentSessionState>() {
 
             int skipped = 1;
+            long lastDownloadedBytes = 0;
+            boolean flag = false;
+
 
             @Override
             public void accept(TorrentSessionState state) {
@@ -194,12 +197,15 @@ public class Controller {
                         peersLabel.setText(String.format("%d", state.getConnectedPeers().size()));
                     });
 
-                    if (state.getPiecesIncomplete() == 0 && lastDownloadedBytes != 0) {
+                    if (state.getPiecesIncomplete() == 0 && !flag) {
                         long timeFinish = System.currentTimeMillis();
-                        Platform.runLater(()-> consoleArea.appendText("Загрузка завершена! Прошло "
-                                + Duration.ofMillis(timeFinish - timeStart).getSeconds()
-                                + " секунд\n"));
-                        lastDownloadedBytes = 0;
+                        Platform.runLater(()-> {
+                            consoleArea.appendText("Загрузка завершена! Прошло "
+                                    + Duration.ofMillis(timeFinish - timeStart).getSeconds()
+                                    + " секунд\n");
+                            resetView();
+                        });
+                        flag = true;
                     }
             }
         }, period);
@@ -207,6 +213,8 @@ public class Controller {
 
     @FXML
     public void handleDestButton() {
+
+        destination = null;
 
         DirectoryChooser directoryChooser = new DirectoryChooser();
         directoryChooser.setInitialDirectory(new File(System.getProperty("user.dir")));
@@ -217,7 +225,7 @@ public class Controller {
 
     public void handlePause() {
 
-        if (client.isStarted()){
+        if (client != null && client.isStarted()){
 
             resetView();
 
