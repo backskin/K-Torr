@@ -12,7 +12,6 @@ import bt.torrent.TorrentSessionState;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.stage.DirectoryChooser;
@@ -22,7 +21,6 @@ import javafx.stage.Stage;
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
-import java.time.ZoneId;
 import java.util.*;
 import java.util.function.Consumer;
 
