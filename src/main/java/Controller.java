@@ -34,6 +34,7 @@ public class Controller {
     public Label seedsLabel;
     public Label peersLabel;
     public Label speedLabel;
+    public Label upSpeedLabel;
     public Label trackerLabel;
 
     @FXML
@@ -166,8 +167,10 @@ public class Controller {
 
         client.startAsync(new Consumer<TorrentSessionState>() {
 
-            int skipped = 1;
+            int dSkipped = 1;
+            int uSkipped = 1;
             long lastDownloadedBytes = 0;
+            long lastUploadedBytes = 0;
             boolean flag = false;
 
 
@@ -187,10 +190,17 @@ public class Controller {
 
                         if (state.getDownloaded() != lastDownloadedBytes) {
                             speedLabel.setText(String.format("%d КБ/сек",
-                                    (state.getDownloaded() - lastDownloadedBytes) / (long)(1.024 * period * skipped)));
+                                    (state.getDownloaded() - lastDownloadedBytes) / (long)(1.024 * period * dSkipped)));
                             lastDownloadedBytes = state.getDownloaded();
-                            skipped = 1;
-                        } else skipped++;
+                            dSkipped = 1;
+                        } else dSkipped++;
+
+                        if (state.getUploaded() != lastUploadedBytes) {
+                            upSpeedLabel.setText(String.format("%d КБ/сек",
+                                    (state.getUploaded() - lastUploadedBytes) / (long)(1.024 * period * uSkipped)));
+                            lastUploadedBytes = state.getUploaded();
+                            uSkipped = 1;
+                        }
 
                         progressBar.setProgress( (double)state.getPiecesComplete() / state.getPiecesTotal());
 
