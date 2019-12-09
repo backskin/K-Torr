@@ -1,13 +1,14 @@
 import bt.Bt;
-import bt.data.Storage;
 import bt.data.file.FileSystemStorage;
 import bt.dht.DHTConfig;
 import bt.dht.DHTModule;
 import bt.metainfo.MetadataService;
 import bt.metainfo.Torrent;
 import bt.metainfo.TorrentFile;
-import bt.net.Peer;
 import bt.runtime.BtClient;
+import bt.runtime.BtRuntime;
+import bt.runtime.BtRuntimeBuilder;
+import bt.runtime.Config;
 import bt.torrent.TorrentSessionState;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
@@ -46,21 +47,21 @@ public class Controller {
     @FXML
     private TextField torrPathField;
 
-    String timePattern = "HH:mm:ss";
-    SimpleDateFormat simpleDateFormat = new SimpleDateFormat();
-    long timeStart;
-    BtClient client;
-    long lastDownloadedBytes = 0;
+    private SimpleDateFormat simpleDateFormat = new SimpleDateFormat();
+    private long timeStart;
+    private BtClient client;
+    private long lastDownloadedBytes = 0;
 
     private Stage owner;
     private Torrent torrent = null;
     private File destination = null;
 
     public Controller(){
+        String timePattern = "HH:mm:ss";
         simpleDateFormat.applyLocalizedPattern(timePattern);
     }
 
-    public void setOwner(Stage owner) {
+    void setOwner(Stage owner) {
         this.owner = owner;
         owner.setOnCloseRequest(event -> {
             if (client != null){
@@ -88,9 +89,12 @@ public class Controller {
 
             tNameLabel.setText(torrent.getName());
 
-            torrent.getAnnounceKey().get().getTrackerUrls().forEach(list -> list.forEach(System.out::println));
+            consoleArea.appendText("Адреса трекеров из торрент-файла:\n");
+            torrent.getAnnounceKey().get().getTrackerUrls().forEach(
+                    list -> list.forEach(
+                            s -> consoleArea.appendText(s + "\n")));
 
-            tSizeLabel.setText(String.format("%.3f", ((double)torrent.getSize())/1024/1024) + " мегабайт");
+            tSizeLabel.setText(String.format("%.2f", ((double)torrent.getSize())/1024/1024) + " мегабайт");
 
             ObservableList<TorrentFile> torrentFiles = tFilesTable.getItems();
             torrentFiles.addAll(torrent.getFiles());
@@ -104,7 +108,7 @@ public class Controller {
             });
 
             tFilesTableSizeColumn.setCellValueFactory(param -> new SimpleStringProperty(
-                    "" + String.format("%.3f", ((double)param.getValue().getSize())/1024/1024) + " мегабайт"));
+                    "" + String.format("%.2f", ((double)param.getValue().getSize())/1024/1024) + " мегабайт"));
         }
     }
 
@@ -117,12 +121,20 @@ public class Controller {
                 return true;
             }
         });
+        BtRuntimeBuilder builder = new BtRuntimeBuilder();
+        Config config = new Config();
 
-        client = Bt.client()
+        BtRuntime runtime = builder
+                .disableAutomaticShutdown()
+                .module(dhtModule)
+                .config(config)
+                .autoLoadModules()
+                .build();
+
+
+        client = Bt.client(runtime)
                 .storage(new FileSystemStorage(destination.toPath()))
                 .torrent(() -> torrent)
-                .autoLoadModules()
-                .module(dhtModule)
                 .stopWhenDownloaded()
                 .build();
 
@@ -137,7 +149,6 @@ public class Controller {
             @Override
             public void accept(TorrentSessionState state) {
 
-
                     Platform.runLater(()-> {
 
                         owner.setTitle(String.format("%d секунд мы что-то грузим",
@@ -151,18 +162,17 @@ public class Controller {
 
                         if (state.getDownloaded() != lastDownloadedBytes) {
                             speedLabel.setText(String.format("%d КБ/сек",
-                                    (state.getDownloaded() - lastDownloadedBytes) / (period * skipped)));
+                                    (state.getDownloaded() - lastDownloadedBytes) / (long)(1.024 * period * skipped)));
                             lastDownloadedBytes = state.getDownloaded();
                             skipped = 1;
-                        } else {
-                            skipped++;
-                        }
+                        } else skipped++;
+
                         progressBar.setProgress( (double)state.getPiecesComplete() / state.getPiecesTotal());
 
-                        peersLabel.setText(String.format("%d",state.getConnectedPeers().size()));
+                        peersLabel.setText(String.format("%d", state.getConnectedPeers().size()));
                     });
 
-                    if (state.getPiecesIncomplete() == 0) {
+                    if (state.getPiecesIncomplete() == 0 && lastDownloadedBytes != 0) {
                         long timeFinish = System.currentTimeMillis();
                         Platform.runLater(()-> consoleArea.appendText("Загрузка завершена! Прошло "
                                 + Duration.ofMillis(timeFinish - timeStart).getSeconds()
