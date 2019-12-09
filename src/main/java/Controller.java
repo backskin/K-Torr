@@ -75,8 +75,27 @@ public class Controller {
     }
 
     @FXML
+    private void initialize(){
+        resetView();
+    }
+
+    private void resetView(){
+
+        progressBar.setProgress(.0);
+        downedLabel.setText("");
+        estimLabel.setText("");
+        peersLabel.setText("");
+        speedLabel.setText("");
+        trackerLabel.setText("");
+        tNameLabel.setText("");
+    }
+
+    @FXML
     public void handleOpenTorrentFile() {
 
+        tFilesTable.getItems().clear();
+        torrent = null;
+        consoleArea.appendText("Загрузка нового торрента...\n");
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Choose a torrent");
         fileChooser.setInitialDirectory(new File(System.getProperty("user.dir")));
@@ -114,6 +133,9 @@ public class Controller {
 
     @FXML
     public void handleStart() {
+
+        if (torrent == null || destination == null)
+            AlertHandler.makeInfo("Вы не выбрали путь загрузки или сам торрент!", owner);
 
         DHTModule dhtModule = new DHTModule(new DHTConfig(){
             @Override
@@ -196,6 +218,8 @@ public class Controller {
     public void handlePause() {
 
         if (client.isStarted()){
+
+            resetView();
 
             consoleArea.appendText("Остановлено\n");
             client.stop();
