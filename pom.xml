@@ -34,7 +34,7 @@
         <bt-version>1.8</bt-version>
         <jopts-version>5.0.2</jopts-version>
         <slf4j-version>1.7.21</slf4j-version>
-        <log4j-version>2.4.1</log4j-version>
+        <log4j-version>2.16.0</log4j-version>
     </properties>
 
     <dependencies>
